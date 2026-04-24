@@ -34,13 +34,9 @@ static void append_json_control_char_escape(std::string &out, unsigned char c) {
 
 [[noreturn]] static void throw_invalid_utf8_byte(std::size_t index,
                                                  unsigned char byte) {
-  char buf[96];
-  std::snprintf(
-      buf, sizeof(buf),
-      "invalid UTF-8 byte while serializing JSON string at index %zu: "
-      "0x%02X",
-      index, byte);
-  throw Error(buf);
+  throw Error(std::format("invalid UTF-8 byte while serializing JSON string at "
+                          "index {}: 0x{:02X}",
+                          index, byte));
 }
 
 static bool try_append_json_ascii_byte(std::string &out, unsigned char c) {
@@ -144,8 +140,6 @@ static std::size_t checked_utf8_sequence_size(const char *data, std::size_t n,
 
 static void append_bytes(std::string &out, std::string_view s) {
   // https://datatracker.ietf.org/doc/html/rfc8259#section-7
-  out.push_back('"');
-
   const char *data = s.data();
   std::size_t n = s.size();
   std::size_t i = 0;
@@ -160,7 +154,11 @@ static void append_bytes(std::string &out, std::string_view s) {
     out.append(data + i, sequence_size);
     i += sequence_size;
   }
+}
 
+static void append_bytes_string(std::string &out, std::string_view s) {
+  out.push_back('"');
+  append_bytes(out, s);
   out.push_back('"');
 }
 
@@ -278,7 +276,7 @@ static bool append_seen_placeholder(SeenState &seen, const void *key,
   message += ": ";
   message += *source_path;
   message.push_back('>');
-  append_bytes(out, message);
+  append_bytes_string(out, message);
   return true;
 }
 
@@ -330,10 +328,7 @@ static void append_value(EvalState &state, Value &v, std::string &out,
       out += d > 0 ? "\"<inf>\"" : "\"<-inf>\"";
       return;
     }
-
-    char buf[64];
-    std::snprintf(buf, sizeof(buf), "%.17g", d);
-    out += buf;
+    std::format_to(std::back_inserter(out), "{:.17g}", d);
     return;
   }
 
@@ -346,16 +341,26 @@ static void append_value(EvalState &state, Value &v, std::string &out,
     return;
 
   case nString:
-    append_bytes(out, v.string_view());
+    append_bytes_string(out, v.string_view());
     return;
 
   case nPath:
-    append_bytes(out, v.path().to_string());
+    append_bytes_string(out, v.path().to_string());
     return;
 
   case nAttrs: {
     if (state.isDerivation(v)) {
-      out += "\"<derivation>\"";
+      out += "\"<derivation: ";
+      auto *drvPath = v.attrs()->get(state.symbols.create("drvPath"));
+      if (drvPath == nullptr) {
+        out += "null";
+      } else {
+        std::string_view path = state.forceString(
+            *drvPath->value, noPos,
+            "while evaluating a derivation drvPath for lazyToJSON");
+        append_bytes(out, path);
+      }
+      out += ">\"";
       return;
     }
 
@@ -368,7 +373,7 @@ static void append_value(EvalState &state, Value &v, std::string &out,
     out.push_back('{');
     for (auto *attr : v.attrs()->lexicographicOrder(state.symbols)) {
       std::string_view name = state.symbols[attr->name];
-      append_bytes(out, name);
+      append_bytes_string(out, name);
       out.push_back(':');
 
       if (attr->value == nullptr) {
@@ -376,10 +381,9 @@ static void append_value(EvalState &state, Value &v, std::string &out,
       } else {
         current_path.push_back(name);
         if (should_skip_path(current_path, filters)) {
-          std::string message = "<skiped by lazy to json ";
-          message += join_attr_path(current_path);
-          message.push_back('>');
-          append_bytes(out, message);
+          out += "\"<skipped by lazy to json: ";
+          append_bytes(out, join_attr_path(current_path));
+          out += ">\"";
         } else {
           append_value(state, *attr->value, out, depth - 1, seen, filters,
                        current_path);

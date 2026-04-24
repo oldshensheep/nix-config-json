@@ -46,7 +46,7 @@ class LazyToJsonCase(unittest.TestCase):
         if result.returncode != 0:
             self.fail(
                 "nix eval failed\n"
-                f"expression: {expr}\n"
+                f"expression: {self.expr}\n"
                     f"stderr:\n{result.stderr.strip()}"
             )
         self.assertEqual(result.stdout, self.expected)
