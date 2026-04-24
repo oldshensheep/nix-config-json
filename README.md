@@ -84,7 +84,6 @@ nixosConfigurations.<host> =
     final = layer0.extendModules {
       modules = [
         (
-          self:
           { pkgs, ... }:
           {
             environment = {
@@ -92,7 +91,7 @@ nixosConfigurations.<host> =
               systemPackages =
                 let
                   valueToPrint = layer0.config;
-                  valueToForce = valueToForce.system.build.toplevel.drvPath;
+                  valueToForce = valueToPrint.system.build.toplevel.drvPath;
                   configJsonFile = pkgs.writeText "nixos-config.json" (
                     builtins.seq valueToForce (
                       builtins.lazyToJSON valueToPrint [
