@@ -2,7 +2,7 @@
 #include <cstdio>
 #include <string>
 #include <string_view>
-#include <unordered_set>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 
@@ -17,8 +17,8 @@ namespace {
 constexpr std::size_t kMaxDepth = 64;
 
 struct SeenState {
-  std::unordered_set<const void *> active;
-  std::unordered_set<const void *> seen;
+  std::unordered_map<const void *, std::string> active;
+  std::unordered_map<const void *, std::string> seen;
 };
 
 using PathParts = std::vector<std::string>;
@@ -260,17 +260,39 @@ static std::string join_attr_path(const AttrPath &path) {
 
 static bool append_seen_placeholder(SeenState &seen, const void *key,
                                     std::string &out) {
-  if (seen.active.contains(key)) {
-    out += "\"<recursive>\"";
-    return true;
+  std::string_view kind;
+  const std::string *source_path = nullptr;
+
+  if (auto active = seen.active.find(key); active != seen.active.end()) {
+    kind = "recursive";
+    source_path = &active->second;
+  } else if (auto previous = seen.seen.find(key); previous != seen.seen.end()) {
+    kind = "repeated";
+    source_path = &previous->second;
+  } else {
+    return false;
   }
 
-  if (seen.seen.contains(key)) {
-    out += "\"<repeated>\"";
-    return true;
+  std::string message = "<";
+  message += kind;
+  message += ": ";
+  message += *source_path;
+  message.push_back('>');
+  append_bytes(out, message);
+  return true;
+}
+
+static void enter_seen(SeenState &seen, const void *key,
+                       const AttrPath &current_path) {
+  std::string path;
+  if (current_path.empty()) {
+    path = "<root>";
+  } else {
+    path = join_attr_path(current_path);
   }
 
-  return false;
+  seen.active.emplace(key, path);
+  seen.seen.try_emplace(key, std::move(path));
 }
 
 static void append_value(EvalState &state, Value &v, std::string &out,
@@ -341,8 +363,7 @@ static void append_value(EvalState &state, Value &v, std::string &out,
       return;
     }
 
-    seen.active.insert(&v);
-    seen.seen.insert(&v);
+    enter_seen(seen, &v, current_path);
 
     out.push_back('{');
     for (auto *attr : v.attrs()->lexicographicOrder(state.symbols)) {
@@ -378,8 +399,7 @@ static void append_value(EvalState &state, Value &v, std::string &out,
       return;
     }
 
-    seen.active.insert(&v);
-    seen.seen.insert(&v);
+    enter_seen(seen, &v, current_path);
 
     out.push_back('[');
     for (auto *elem : v.listView()) {
