@@ -6,5 +6,6 @@ in
 builtins.seq system (
   builtins.lazyToJSON host [
     "home-manager.extraSpecialArgs.nixosConfig"
+    "assertions"
   ]
 )

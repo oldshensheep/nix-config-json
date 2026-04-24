@@ -16,7 +16,7 @@ in
       plugin = pkgs.callPackage ./libnix-value-json.nix { };
       jsonDiff = pkgs.callPackage ./json-diff.nix { };
       lib = pkgs.lib;
-      d = pkgs.writeShellApplication {
+      evalScript = pkgs.writeShellApplication {
         runtimeInputs = [ pkgs.nix ];
         name = "nix-value-json-script";
         text = ''
@@ -29,7 +29,7 @@ in
     {
       "libnix-value-json" = plugin;
       "json-diff" = jsonDiff;
-      default = d;
+      default = evalScript;
     }
   );
 

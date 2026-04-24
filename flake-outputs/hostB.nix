@@ -1,24 +1,15 @@
 { nixpkgs, ... }:
 nixpkgs.lib.nixosSystem {
   modules = [
+    ./hostBase.nix
     (
-      { pkgs, lib, ... }:
+      { pkgs, ... }:
       {
-        nixpkgs.hostPlatform = {
-          system = "x86_64-linux";
-        };
-        system.stateVersion = lib.trivial.release;
-        fileSystems = {
-          "/" = {
-            device = "/dev/sda1";
-            fsType = "ext4";
-          };
-          "/boot" = {
-            device = "/dev/sda2";
-            fsType = "fat32";
-          };
-        };
-        boot.loader.systemd-boot.enable = true;
+        services.nginx.enable = true;
+        environment.systemPackages = [
+          pkgs.firefox
+          pkgs.thunderbird
+        ];
       }
     )
   ];
