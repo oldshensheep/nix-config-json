@@ -1,0 +1,21 @@
+name,expr,expected,expected_error
+registers lazyToJSON builtin,"if builtins ? lazyToJSON then ""true"" else ""false""",true
+serializes scalar values,"let x = [ ""text"" 42 true false null ]; in builtins.deepSeq x (builtins.lazyToJSON x [])","[""text"",42,true,false,null]"
+escapes JSON string bytes,"let x = ""line\n"" + ""quote\"""" + ""slash\\""; in builtins.deepSeq x (builtins.lazyToJSON x [])","""line\nquote\""slash\\"""
+covers JSON string escaping and UTF-8,"let s = builtins.fromJSON ""\""plain\\\""\\\\\\b\\f\\n\\r\\t\\u0001\\u00a2\\u20ac\\ud83d\\ude00\""""; in builtins.seq s (builtins.lazyToJSON s [])","""plain\""\\\b\f\n\r\t\u0001¢€😀"""
+serializes UTF-8 boundary sequences,let s = builtins.readFile @TEST_DIR@/utf8_boundaries.bin; in builtins.seq s (builtins.lazyToJSON s []),"""ࠀ퟿􏿿""",
+leaves root attrset expression lazy,builtins.lazyToJSON { a = 1; } [],"""<thunk>"""
+serializes forced attrsets in lexicographic order,"let x = { z = 2; a = ""x""; }; in builtins.deepSeq x (builtins.lazyToJSON x [])","{""a"":""x"",""z"":2}"
+serializes forced lists,"let x = [ 1 true null ""x"" ]; in builtins.deepSeq x (builtins.lazyToJSON x [])","[1,true,null,""x""]"
+serializes paths,let p = @TEST_DIR@/invalid_utf8.bin; in builtins.seq p (builtins.lazyToJSON p []),"""@TEST_DIR@/invalid_utf8.bin"""
+skips matching attr paths,"let x = { top = { nested = { value = 1; keep = 2; }; }; }; in builtins.deepSeq x (builtins.lazyToJSON x [ ""nested.value"" ])","{""top"":{""nested"":{""keep"":2,""value"":""<skiped by lazy to json top.nested.value>""}}}"
+marks repeated containers,let x = { a = 1; }; y = { p = x; q = x; }; in builtins.deepSeq y (builtins.lazyToJSON y []),"{""p"":{""a"":1},""q"":""<repeated>""}"
+marks recursive attrsets,let x = { self = x; }; in builtins.seq x (builtins.lazyToJSON x []),"{""self"":""<recursive>""}"
+serializes derivations as placeholders,"let x = derivation { name = ""x""; system = builtins.currentSystem; builder = ""/bin/sh""; args = [ ""-c"" ""echo hi > $out"" ]; }; in builtins.seq x (builtins.lazyToJSON x [])","""<derivation>"""
+treats type derivation attrsets as derivations,"let x = { type = ""derivation""; }; in builtins.deepSeq x (builtins.lazyToJSON x [])","""<derivation>"""
+serializes forced functions as placeholders,let f = x: x; in builtins.seq f (builtins.lazyToJSON f []),"""<function>"""
+marks blackhole thunks,let x = builtins.lazyToJSON x []; in x,"""<potential infinite recursion>"""
+serializes finite and non-finite floats,"let toml = builtins.fromTOML ""nan = nan\npos = inf\nneg = -inf""; x = [ 1.25 toml.nan toml.pos toml.neg ]; in builtins.deepSeq x (builtins.lazyToJSON x [])","[1.25,""<nan>"",""<inf>"",""<-inf>""]"
+rejects invalid UTF-8 strings,let s = builtins.readFile @TEST_DIR@/invalid_utf8.bin; in builtins.seq s (builtins.lazyToJSON s []),,invalid UTF-8 byte while serializing JSON string at index 0: 0x80
+rejects invalid UTF-8 continuation bytes,let s = builtins.readFile @TEST_DIR@/invalid_utf8_continuation.bin; in builtins.seq s (builtins.lazyToJSON s []),,invalid UTF-8 byte while serializing JSON string at index 1: 0x28
+rejects invalid UTF-8 second-byte ranges,let s = builtins.readFile @TEST_DIR@/invalid_utf8_range.bin; in builtins.seq s (builtins.lazyToJSON s []),,invalid UTF-8 byte while serializing JSON string at index 0: 0xE0

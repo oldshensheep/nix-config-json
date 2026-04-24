@@ -45,13 +45,18 @@ in
     in
     {
       default = pkgs.mkShell {
-        packages = [
-          pkgs.pkg-config
-          pkgs.meson
-          pkgs.ninja
-          nixPkg
-          nixPkg.dev
-        ];
+        packages =
+          (with pkgs; [
+            pkg-config
+            python3
+            meson
+            ninja
+            gcovr
+          ])
+          ++ [
+            nixPkg.dev
+            nixPkg
+          ];
       };
     }
   );

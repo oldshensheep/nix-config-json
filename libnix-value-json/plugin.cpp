@@ -119,6 +119,7 @@ static bool utf8_second_byte_in_lead_range(unsigned char lead,
 
 static std::size_t checked_utf8_sequence_size(const char *data, std::size_t n,
                                               std::size_t i) {
+  // https://datatracker.ietf.org/doc/html/rfc3629#section-4
   unsigned char lead = static_cast<unsigned char>(data[i]);
   std::size_t size = utf8_sequence_size_from_lead(lead);
 
@@ -142,6 +143,7 @@ static std::size_t checked_utf8_sequence_size(const char *data, std::size_t n,
 }
 
 static void append_bytes(std::string &out, std::string_view s) {
+  // https://datatracker.ietf.org/doc/html/rfc8259#section-7
   out.push_back('"');
 
   const char *data = s.data();

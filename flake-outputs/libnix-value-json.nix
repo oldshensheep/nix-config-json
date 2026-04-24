@@ -23,7 +23,7 @@ stdenv.mkDerivation {
   ];
 
   meta = {
-    description = "Nix plugin that safely serializes values to JSON";
+    description = "Nix plugin that lazily serializes values to JSON";
     homepage = "https://github.com/oldshensheep/nix-plugins";
     platforms = lib.platforms.all;
   };
