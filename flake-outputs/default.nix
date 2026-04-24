@@ -27,8 +27,8 @@ in
       };
     in
     {
-      "libnix-value-json" = plugin;
-      "json-diff" = jsonDiff;
+      libnix-value-json = plugin;
+      json-diff = jsonDiff;
       default = evalScript;
     }
   );

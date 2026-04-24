@@ -431,7 +431,8 @@ static void prim_lazy_to_json(EvalState &state, const PosIdx pos, Value **args,
   SeenState seen;
   AttrPath current_path;
   PathFilters filters = parse_filter_paths(state, pos, *args[1]);
-
+  // TODO force it for better experience?
+  // state.forceValue(*args[0], pos);
   append_value(state, *args[0], json, kMaxDepth, seen, filters, current_path);
   v.mkString(json, state.mem);
 }
