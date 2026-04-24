@@ -81,6 +81,51 @@ fn push_diff(
     });
 }
 
+fn lcs_table(a: &[Value], b: &[Value]) -> Vec<Vec<usize>> {
+    let mut dp = vec![vec![0; b.len() + 1]; a.len() + 1];
+
+    for i in (0..a.len()).rev() {
+        for j in (0..b.len()).rev() {
+            dp[i][j] = if a[i] == b[j] {
+                dp[i + 1][j + 1] + 1
+            } else {
+                dp[i + 1][j].max(dp[i][j + 1])
+            };
+        }
+    }
+
+    dp
+}
+
+fn diff_arrays(
+    path: &mut Vec<PathSegment>,
+    old: &[Value],
+    new: &[Value],
+    diffs: &mut Vec<DiffEntry>,
+) {
+    let dp = lcs_table(old, new);
+
+    let mut i = 0;
+    let mut j = 0;
+
+    while i < old.len() || j < new.len() {
+        if i < old.len() && j < new.len() && old[i] == new[j] {
+            i += 1;
+            j += 1;
+        } else if j < new.len() && (i == old.len() || dp[i][j + 1] >= dp[i + 1][j]) {
+            path.push(PathSegment::Index(j));
+            push_diff(diffs, path, None, Some(&new[j]));
+            path.pop();
+            j += 1;
+        } else if i < old.len() {
+            path.push(PathSegment::Index(i));
+            push_diff(diffs, path, Some(&old[i]), None);
+            path.pop();
+            i += 1;
+        }
+    }
+}
+
 fn diff_values(path: &mut Vec<PathSegment>, old: &Value, new: &Value, diffs: &mut Vec<DiffEntry>) {
     if old == new {
         return;
@@ -108,25 +153,7 @@ fn diff_values(path: &mut Vec<PathSegment>, old: &Value, new: &Value, diffs: &mu
             }
         }
         (Value::Array(a), Value::Array(b)) => {
-            let shared = a.len().min(b.len());
-
-            for i in 0..shared {
-                path.push(PathSegment::Index(i));
-                diff_values(path, &a[i], &b[i], diffs);
-                path.pop();
-            }
-
-            for (i, value) in a.iter().enumerate().skip(shared) {
-                path.push(PathSegment::Index(i));
-                push_diff(diffs, path, Some(value), None);
-                path.pop();
-            }
-
-            for (i, value) in b.iter().enumerate().skip(shared) {
-                path.push(PathSegment::Index(i));
-                push_diff(diffs, path, None, Some(value));
-                path.pop();
-            }
+            diff_arrays(path, a, b, diffs);
         }
         _ => push_diff(diffs, path, Some(old), Some(new)),
     }
