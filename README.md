@@ -27,14 +27,14 @@ This flake exposes:
 Generate JSON from the hosts:
 
 ```bash
-nix run github:oldshensheep/nix-plugin# -- .#nixosConfigurations.a > a.json
-nix run github:oldshensheep/nix-plugin# -- .#nixosConfigurations.b > b.json
+nix run github:oldshensheep/nix-config-json# -- .#nixosConfigurations.a > a.json
+nix run github:oldshensheep/nix-config-json# -- .#nixosConfigurations.b > b.json
 ```
 
 Diff them:
 
 ```bash
-nix run github:oldshensheep/nix-plugin#json-diff -- a.json b.json
+nix run github:oldshensheep/nix-config-json#json-diff -- a.json b.json
 ```
 
 Example output:
@@ -57,7 +57,7 @@ Example output:
 Use the plugin directly:
 
 ```bash
-nix build github:oldshensheep/nix-plugin#libnix-value-json
+nix build github:oldshensheep/nix-config-json#libnix-value-json
 
 nix eval \
   --plugin-files ./result/lib/libnix-value-json.so \
@@ -132,7 +132,7 @@ persistently on NixOS, add it to `nix.settings.plugin-files`:
 For a one-off rebuild, pass the plugin path on the command line:
 
 ```bash
-nix build github:oldshensheep/nix-plugin#libnix-value-json
+nix build github:oldshensheep/nix-config-json#libnix-value-json
 
 nixos-rebuild switch --flake .#<host> --sudo --show-trace -L \
   --option plugin-files "result/lib/libnix-value-json.so"
@@ -142,7 +142,7 @@ After deploying multiple generations with this module, diff their exported
 configuration JSON files from the system profile:
 
 ```bash
-nix run github:oldshensheep/nix-plugin#json-diff -- \
+nix run github:oldshensheep/nix-config-json#json-diff -- \
   /nix/var/nix/profiles/system-123-link/sw/share/nixos-config/nixos-config.json \
   /run/current-system/sw/share/nixos-config/nixos-config.json
 ```
