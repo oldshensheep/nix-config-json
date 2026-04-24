@@ -258,25 +258,17 @@ static std::string join_attr_path(const AttrPath &path) {
 
 static bool append_seen_placeholder(SeenState &seen, const void *key,
                                     std::string &out) {
-  std::string_view kind;
-  const std::string *source_path = nullptr;
-
   if (auto active = seen.active.find(key); active != seen.active.end()) {
-    kind = "recursive";
-    source_path = &active->second;
+    out += "\"<recursive: ";
+    append_bytes(out, active->second);
+    out += ">\"";
   } else if (auto previous = seen.seen.find(key); previous != seen.seen.end()) {
-    kind = "repeated";
-    source_path = &previous->second;
+    out += "\"<repeated: ";
+    append_bytes(out, previous->second);
+    out += ">\"";
   } else {
     return false;
   }
-
-  std::string message = "<";
-  message += kind;
-  message += ": ";
-  message += *source_path;
-  message.push_back('>');
-  append_bytes_string(out, message);
   return true;
 }
 
