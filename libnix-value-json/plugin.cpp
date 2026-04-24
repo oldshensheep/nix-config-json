@@ -354,11 +354,12 @@ static void append_value(EvalState &state, Value &v, std::string &out,
       auto *drvPath = v.attrs()->get(state.symbols.create("drvPath"));
       if (drvPath == nullptr) {
         out += "null";
+      } else if (drvPath->value->isThunk()) {
+        out += "unforced drvPath";
+      } else if (drvPath->value->type() == nString) {
+        append_bytes(out, drvPath->value->string_view());
       } else {
-        std::string_view path = state.forceString(
-            *drvPath->value, noPos,
-            "while evaluating a derivation drvPath for lazyToJSON");
-        append_bytes(out, path);
+        out += "non-string drvPath";
       }
       out += ">\"";
       return;
