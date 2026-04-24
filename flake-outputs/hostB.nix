@@ -5,7 +5,6 @@ nixpkgs.lib.nixosSystem {
     (
       { pkgs, ... }:
       {
-        services.nginx.enable = true;
         environment.systemPackages = [
           pkgs.firefox
           pkgs.thunderbird

@@ -2,8 +2,11 @@
 nixpkgs.lib.nixosSystem {
   modules = [
     ./hostBase.nix
-    {
-      services.pipewire.enable = true;
-    }
+    (
+      { lib, ... }:
+      {
+        environment.defaultPackages = lib.mkForce [ ];
+      }
+    )
   ];
 }
