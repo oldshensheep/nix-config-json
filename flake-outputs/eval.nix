@@ -4,7 +4,7 @@ let
   system = config.system.build.toplevel;
 in
 builtins.seq system (
-  builtins.lazyToJSON host [
+  builtins.lazyToJSON config [
     "home-manager.extraSpecialArgs.nixosConfig"
     "assertions"
   ]
