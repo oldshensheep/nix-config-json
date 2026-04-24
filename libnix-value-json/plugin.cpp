@@ -351,15 +351,15 @@ static void append_value(EvalState &state, Value &v, std::string &out,
   case nAttrs: {
     if (state.isDerivation(v)) {
       out += "\"<derivation: ";
-      auto *drvPath = v.attrs()->get(state.symbols.create("drvPath"));
+      auto *drvPath = v.attrs()->get(state.symbols.create("name"));
       if (drvPath == nullptr) {
         out += "null";
       } else if (drvPath->value->isThunk()) {
-        out += "unforced drvPath";
+        out += "unforced name";
       } else if (drvPath->value->type() == nString) {
         append_bytes(out, drvPath->value->string_view());
       } else {
-        out += "non-string drvPath";
+        out += "non-string name";
       }
       out += ">\"";
       return;
