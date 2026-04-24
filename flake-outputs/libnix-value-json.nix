@@ -7,7 +7,7 @@
   stdenv,
 }:
 stdenv.mkDerivation {
-  pname = "nix-value-json";
+  pname = "libnix-value-json";
   version = "0.1.0";
 
   src = ../libnix-value-json;

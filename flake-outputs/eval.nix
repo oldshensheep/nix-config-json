@@ -1,11 +1,10 @@
 host:
 let
   config = host.config;
-  system = config.system.build.toplevel;
-in
-builtins.seq system (
-  builtins.lazyToJSON config [
+  valueToForce = config.system.build.toplevel.drvPath;
+  valueToPrint = builtins.lazyToJSON config [
     "home-manager.extraSpecialArgs.nixosConfig"
     "assertions"
-  ]
-)
+  ];
+in
+builtins.seq valueToForce valueToPrint
