@@ -37,21 +37,26 @@ Diff them:
 nix run github:oldshensheep/nix-value-json#json-diff -- a.json b.json
 ```
 
-Example output:
+If the output is mostly Nix store path churn, use `json-diff -S hash` to
+ignore store path hash changes, or `json-diff -S full` to ignore any path
+starting with `/nix/store/<hash>-...`.
+
+Example output after `nix flake update` and add nushell to `home.packages` with `-S full`:
 
 ```diff
-@ environment.etc.terminfo.source
-- "/nix/store/m69mdnhc7r599bmswgj2jzji4g9x8j02-system-path/share/terminfo"
-+ "/nix/store/92lq3294admmc7zsfkjazwxxy5dvpk9p-system-path/share/terminfo"
+@ home-manager.sharedModules[25]
++ "«github:nix-community/nix-index-database/b8eb7acee0f7604fe1bf6a5b3dcf5254369180fa?narHash=sha256-yVJbd07ortDRAttDFmDV5p220aOLTHgVAx//0nW/xW8%3D»/home-manager-module.nix"
 
-@ environment.systemPackages[0]
-+ "<derivation: firefox-149.0.2>"
+@ home-manager.sharedModules[25]
+- "«github:nix-community/nix-index-database/c43246d4e9e506178b69baed075d797ec2d873e2?narHash=sha256-oHVcvP2Ahhj1KUsEzp%2B2BQF55/r5VSa3QxdPdwE1p00%3D»/home-manager-module.nix"
 
-@ environment.systemPackages[1]
-+ "<derivation: thunderbird-149.0.2>"
+@ home-manager.users.mio.home.extraDependencies[146]
++ "<derivation: nushell-0.112.2-fish-completions>"
 
-@ environment.systemPackages[116]
-+ "<derivation: perl-5.42.0>"
+@ home-manager.users.mio.home.packages[150]
++ "<derivation: nushell-0.112.2>"
+
+Stats: added 3, deleted 1, ignored 20
 ```
 
 Use the plugin directly:
