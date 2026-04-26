@@ -9,8 +9,11 @@ use serde_json::Value;
 
 #[derive(Clone, Copy, Debug, ValueEnum)]
 enum ColorChoice {
+    #[value(help = "Use colors only when stdout is a terminal")]
     Auto,
+    #[value(help = "Always use colors")]
     On,
+    #[value(help = "Never use colors")]
     Off,
 }
 
@@ -26,7 +29,9 @@ impl ColorChoice {
 
 #[derive(Clone, Copy, Debug, ValueEnum)]
 enum PrettyChoice {
+    #[value(help = "Pretty print changed arrays and objects")]
     On,
+    #[value(help = "Print compact one-line JSON")]
     Off,
 }
 
@@ -38,7 +43,9 @@ impl PrettyChoice {
 
 #[derive(Clone, Copy, Debug, ValueEnum)]
 enum StatsChoice {
+    #[value(help = "Print add/delete/ignored counts at the bottom")]
     On,
+    #[value(help = "Hide the summary counts")]
     Off,
 }
 
@@ -48,28 +55,48 @@ impl StatsChoice {
     }
 }
 
+#[derive(Clone, Copy, Debug, Default, ValueEnum)]
+enum StorePathIgnoreMode {
+    #[default]
+    #[value(help = "Compare full Nix store paths")]
+    None,
+    #[value(help = "Ignore hash changes in Nix store paths")]
+    Hash,
+    #[value(help = "Ignore Nix store path changes")]
+    Full,
+}
+
 #[derive(Debug, Parser)]
 #[command(version, about = "Diff two JSON files")]
 struct Args {
+    #[arg(help = "Original JSON file")]
     old: PathBuf,
+
+    #[arg(help = "Updated JSON file")]
     new: PathBuf,
 
-    #[arg(long, value_enum, default_value_t = ColorChoice::Auto)]
+    #[arg(long, value_enum, default_value_t = ColorChoice::Auto, help = "Control colored output")]
     color: ColorChoice,
 
-    #[arg(long, value_enum, default_value_t = PrettyChoice::On)]
+    #[arg(long, value_enum, default_value_t = PrettyChoice::On, help = "Control JSON value formatting")]
     pretty: PrettyChoice,
 
-    #[arg(long, value_enum, default_value_t = StatsChoice::On)]
+    #[arg(long, value_enum, default_value_t = StatsChoice::On, help = "Control summary stats output")]
     stats: StatsChoice,
 
-    #[arg(long)]
-    ignore_store_path_hashes: bool,
+    #[arg(
+        long,
+        short = 'S',
+        value_enum,
+        default_value_t = StorePathIgnoreMode::None,
+        help = "Control Nix store path ignoring"
+    )]
+    store_path_ignore_mode: StorePathIgnoreMode,
 }
 
 #[derive(Clone, Copy, Debug, Default)]
 struct CompareOptions {
-    ignore_store_path_hashes: bool,
+    ignore_store_path: StorePathIgnoreMode,
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -200,6 +227,22 @@ fn has_nix_store_hash_at(bytes: &[u8], index: usize) -> bool {
             .all(|byte| is_nix_hash_byte(*byte))
 }
 
+fn is_store_path_delimiter(byte: u8) -> bool {
+    byte == b':' || byte.is_ascii_whitespace()
+}
+
+fn nix_store_path_end(bytes: &[u8], index: usize) -> Option<usize> {
+    if !has_nix_store_hash_at(bytes, index) {
+        return None;
+    }
+
+    let mut end = index;
+    while end < bytes.len() && !is_store_path_delimiter(bytes[end]) {
+        end += 1;
+    }
+    Some(end)
+}
+
 fn strings_equal_ignoring_nix_store_hashes(a: &str, b: &str) -> bool {
     const PREFIX_LEN: usize = b"/nix/store/".len();
     const HASH_LEN: usize = 32;
@@ -224,14 +267,47 @@ fn strings_equal_ignoring_nix_store_hashes(a: &str, b: &str) -> bool {
     a_index == a.len() && b_index == b.len()
 }
 
+fn strings_equal_ignoring_full_nix_store_paths(a: &str, b: &str) -> bool {
+    let a = a.as_bytes();
+    let b = b.as_bytes();
+    let mut a_index = 0;
+    let mut b_index = 0;
+
+    while a_index < a.len() && b_index < b.len() {
+        match (
+            nix_store_path_end(a, a_index),
+            nix_store_path_end(b, b_index),
+        ) {
+            (Some(a_end), Some(b_end)) => {
+                a_index = a_end;
+                b_index = b_end;
+            }
+            _ if a[a_index] == b[b_index] => {
+                a_index += 1;
+                b_index += 1;
+            }
+            _ => return false,
+        }
+    }
+
+    a_index == a.len() && b_index == b.len()
+}
+
 fn values_equal(old: &Value, new: &Value, options: CompareOptions) -> bool {
     if old == new {
         return true;
     }
 
     match (old, new) {
-        (Value::String(a), Value::String(b)) if options.ignore_store_path_hashes => {
+        (Value::String(a), Value::String(b))
+            if matches!(options.ignore_store_path, StorePathIgnoreMode::Hash) =>
+        {
             strings_equal_ignoring_nix_store_hashes(a, b)
+        }
+        (Value::String(a), Value::String(b))
+            if matches!(options.ignore_store_path, StorePathIgnoreMode::Full) =>
+        {
+            strings_equal_ignoring_full_nix_store_paths(a, b)
         }
         (Value::Array(a), Value::Array(b)) => {
             a.len() == b.len()
@@ -353,8 +429,14 @@ fn count_ignored_diffs(old: &Value, new: &Value, stats: &mut DiffStats, options:
 
     match (old, new) {
         (Value::String(a), Value::String(b))
-            if options.ignore_store_path_hashes
+            if matches!(options.ignore_store_path, StorePathIgnoreMode::Hash)
                 && strings_equal_ignoring_nix_store_hashes(a, b) =>
+        {
+            stats.ignored += 1;
+        }
+        (Value::String(a), Value::String(b))
+            if matches!(options.ignore_store_path, StorePathIgnoreMode::Full)
+                && strings_equal_ignoring_full_nix_store_paths(a, b) =>
         {
             stats.ignored += 1;
         }
@@ -423,7 +505,7 @@ fn main() -> Result<()> {
     let old = read_json_file(&args.old)?;
     let new = read_json_file(&args.new)?;
     let options = CompareOptions {
-        ignore_store_path_hashes: args.ignore_store_path_hashes,
+        ignore_store_path: args.store_path_ignore_mode,
     };
 
     let mut diffs = Vec::new();
