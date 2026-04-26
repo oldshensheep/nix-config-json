@@ -3,13 +3,17 @@ import csv
 from pathlib import Path
 import subprocess
 import sys
+import tempfile
 import unittest
 
 
 class LazyToJsonCase(unittest.TestCase):
-    def __init__(self, plugin: str, index: int, case: dict[str, str]) -> None:
+    def __init__(
+        self, plugin: str, store_url: str, index: int, case: dict[str, str]
+    ) -> None:
         super().__init__("runTest")
         self.plugin = plugin
+        self.store_url = store_url
         self.name = f"{index:03d} {case['name']}"
         self.expr = case["expr"]
         self.expected = case["expected"]
@@ -27,6 +31,8 @@ class LazyToJsonCase(unittest.TestCase):
                 "nix",
                 "--extra-experimental-features",
                 "nix-command",
+                "--store",
+                self.store_url,
                 "eval",
                 "--impure",
                 "--plugin-files",
@@ -97,9 +103,9 @@ def load_cases(cases_path: Path) -> list[dict[str, str]]:
     return cases
 
 
-def make_suite(plugin: str, cases_path: Path) -> unittest.TestSuite:
+def make_suite(plugin: str, store_url: str, cases_path: Path) -> unittest.TestSuite:
     return unittest.TestSuite(
-        LazyToJsonCase(plugin, index, expand_case_paths(case, cases_path.parent))
+        LazyToJsonCase(plugin, store_url, index, expand_case_paths(case, cases_path.parent))
         for index, case in enumerate(load_cases(cases_path), 1)
     )
 
@@ -119,9 +125,11 @@ def expand_case_paths(case: dict[str, str], cases_dir: Path) -> dict[str, str]:
 
 def main() -> int:
     args = parse_args()
-    suite = make_suite(args.plugin, args.cases)
-    result = unittest.TextTestRunner(verbosity=2).run(suite)
-    return 0 if result.wasSuccessful() else 1
+    with tempfile.TemporaryDirectory(prefix="nix-value-json-test-") as temp_dir:
+        store_url = str(Path(temp_dir) / "store")
+        suite = make_suite(args.plugin, store_url, args.cases)
+        result = unittest.TextTestRunner(verbosity=2).run(suite)
+        return 0 if result.wasSuccessful() else 1
 
 
 if __name__ == "__main__":

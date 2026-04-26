@@ -4,6 +4,7 @@
   ninja,
   nix,
   pkg-config,
+  python3,
   stdenv,
 }:
 stdenv.mkDerivation {
@@ -16,15 +17,22 @@ stdenv.mkDerivation {
     meson
     ninja
     pkg-config
+    python3
+  ];
+
+  nativeCheckInputs = [
+    nix
   ];
 
   buildInputs = [
     nix.dev
   ];
 
+  doCheck = true;
+
   meta = {
     description = "Nix plugin that lazily serializes values to JSON";
-    homepage = "https://github.com/oldshensheep/nix-plugins";
+    homepage = "https://github.com/oldshensheep/nix-value-json";
     platforms = lib.platforms.all;
   };
 }

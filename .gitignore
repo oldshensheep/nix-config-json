@@ -1,6 +1,5 @@
 .vscode
 .cache
-builddir
-build
+builddir*
 *.json
 result

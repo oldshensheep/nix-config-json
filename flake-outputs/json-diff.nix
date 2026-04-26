@@ -12,7 +12,7 @@ rustPlatform.buildRustPackage {
 
   meta = {
     description = "Git-style JSON structural diff CLI";
-    homepage = "https://github.com/oldshensheep/nix-plugins";
+    homepage = "https://github.com/oldshensheep/nix-value-json";
     mainProgram = "json-diff";
     platforms = lib.platforms.all;
   };

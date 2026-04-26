@@ -1,4 +1,4 @@
-# nix-config-json
+# nix-value-json
 
 Tools for serializing Nix values to JSON and comparing the resulting data.
 
@@ -27,14 +27,14 @@ This flake exposes:
 Generate JSON from the hosts:
 
 ```bash
-nix run github:oldshensheep/nix-config-json# -- .#nixosConfigurations.a > a.json
-nix run github:oldshensheep/nix-config-json# -- .#nixosConfigurations.b > b.json
+nix run github:oldshensheep/nix-value-json# -- .#nixosConfigurations.a > a.json
+nix run github:oldshensheep/nix-value-json# -- .#nixosConfigurations.b > b.json
 ```
 
 Diff them:
 
 ```bash
-nix run github:oldshensheep/nix-config-json#json-diff -- a.json b.json
+nix run github:oldshensheep/nix-value-json#json-diff -- a.json b.json
 ```
 
 Example output:
@@ -57,7 +57,7 @@ Example output:
 Use the plugin directly:
 
 ```bash
-nix build github:oldshensheep/nix-config-json#libnix-value-json
+nix build github:oldshensheep/nix-value-json#libnix-value-json
 
 nix eval \
   --plugin-files ./result/lib/libnix-value-json.so \
@@ -131,7 +131,7 @@ persistently on NixOS, add it to `nix.settings.plugin-files`:
 For a one-off rebuild, pass the plugin path on the command line:
 
 ```bash
-nix build github:oldshensheep/nix-config-json#libnix-value-json
+nix build github:oldshensheep/nix-value-json#libnix-value-json
 
 nixos-rebuild switch --flake .#<host> --sudo --show-trace -L \
   --option plugin-files "result/lib/libnix-value-json.so"
@@ -141,7 +141,7 @@ After deploying multiple generations with this module, diff their exported
 configuration JSON files from the system profile:
 
 ```bash
-nix run github:oldshensheep/nix-config-json#json-diff -- \
+nix run github:oldshensheep/nix-value-json#json-diff -- \
   /nix/var/nix/profiles/system-123-link/sw/share/nixos-config/nixos-config.json \
   /run/current-system/sw/share/nixos-config/nixos-config.json
 ```
@@ -185,17 +185,22 @@ The dev shell is focused on the Nix plugin workflow. It does not include
 Run all plugin behavior tests:
 
 ```bash
-tests/run-all-tests.sh
+cd libnix-value-json
+meson setup builddir .
+meson test -C builddir --print-errorlogs
 ```
 
 Generate coverage for `libnix-value-json/plugin.cpp`:
 
 ```bash
-tests/generate-coverage.sh
+cd libnix-value-json
+meson setup builddir-coverage . -Db_coverage=true -Dbuildtype=debug
+meson test -C builddir-coverage --print-errorlogs
+meson compile -C builddir-coverage plugin-coverage-html
 ```
 
 The coverage report is written to:
 
 ```text
-tests/builddir/coverage.html
+libnix-value-json/builddir-coverage/coverage.html
 ```
