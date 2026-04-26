@@ -1,12 +1,8 @@
 { self, nixpkgs, ... }@inputs:
 let
-  systems = [
-    "x86_64-linux"
-    "aarch64-linux"
-  ];
+  systems = nixpkgs.lib.systems.flakeExposed;
   forSystems = f: nixpkgs.lib.genAttrs systems (system: f system);
   pkgsFor = system: import nixpkgs { inherit system; };
-
 in
 {
   packages = forSystems (
