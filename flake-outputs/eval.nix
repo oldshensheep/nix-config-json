@@ -5,6 +5,7 @@ let
   valueToPrint = builtins.lazyToJSON config [
     "home-manager.extraSpecialArgs"
     "assertions"
+    "meta.doc"
   ];
 in
 builtins.seq valueToForce valueToPrint

@@ -102,6 +102,7 @@ nixosConfigurations.<host> =
                       builtins.lazyToJSON valueToPrint [
                         "home-manager.extraSpecialArgs"
                         "assertions"
+                        "meta.doc"
                         # if you add your config to registry...
                         # "nix.registry.<name>.to.path"
                       ]
