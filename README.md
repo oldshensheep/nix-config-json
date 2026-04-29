@@ -13,6 +13,8 @@ the value, except attrsets with a `type` key. This is useful when inspecting
 large NixOS configurations where a normal full evaluation or `builtins.toJSON`
 would force too much.
 
+Note that the builtin output depends on Nix’s internal evaluation implementation. The same value may produce different results, and the project may change the output format of a value, so please don’t use it for other purposes.
+
 ## Packages
 
 This flake exposes:
